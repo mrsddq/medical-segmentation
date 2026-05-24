@@ -1,37 +1,34 @@
-"""Train U-Net on medical segmentation data.
-Usage: python scripts/train.py --config configs/unet.yaml
-"""
-import argparse, yaml, torch
+"""Train U-Net on medical segmentation data."""
+import argparse
 from pathlib import Path
 
+import torch
 
-def dice_loss(pred, target, smooth=1.0):
-    p, t = pred.view(-1), target.view(-1)
-    return 1 - (2.0 * (p * t).sum() + smooth) / (p.sum() + t.sum() + smooth)
-
-
-def combined_loss(pred, target, dw=0.5, bw=0.5):
-    return bw * torch.nn.functional.binary_cross_entropy(pred, target) + dw * dice_loss(pred, target)
+from scripts.utils import load_config
 
 
 def main(cfg_path):
-    with open(cfg_path) as f:
-        cfg = yaml.safe_load(f)
+    cfg = load_config(cfg_path)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
+
     from models.unet import UNet
+
     model = UNet(**cfg["model"]).to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=cfg["training"]["lr"])
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, cfg["training"]["epochs"])
-    ckpt_dir = Path(cfg["logging"]["checkpoint_dir"])
-    ckpt_dir.mkdir(parents=True, exist_ok=True)
-    # Plug in your DataLoader here:
-    # from data.dataset import MedicalSegDataset
-    # train_loader = DataLoader(MedicalSegDataset("train", cfg["data"]), ...)
-    print("Plug in DataLoader to begin training.")
+    checkpoint_dir = Path(cfg["logging"]["checkpoint_dir"])
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg["training"]["lr"])
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, cfg["training"]["epochs"])
+
+    print("Model initialized successfully.")
+    print("Next step: connect a dataset class and DataLoader for your preprocessed scans.")
+    print(f"Checkpoints will be saved to: {checkpoint_dir}")
+    return model, optimizer, scheduler
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--config", default="configs/unet.yaml")
-    main(p.parse_args().config)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="configs/unet.yaml")
+    args = parser.parse_args()
+    main(args.config)

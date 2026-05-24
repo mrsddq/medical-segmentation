@@ -7,3 +7,8 @@ __pycache__/
 .DS_Store
 .env
 wandb/
+.venv/
+.pytest_cache/
+outputs/predictions/
+assets/*.pt
+assets/*.pth

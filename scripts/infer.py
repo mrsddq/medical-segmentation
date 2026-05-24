@@ -1,25 +1,33 @@
-"""Run inference on a single NIfTI scan.
-Usage: python scripts/infer.py --input scan.nii.gz --output outputs/predictions/
-"""
-import argparse, torch
+"""Run inference on a single medical image volume."""
+import argparse
 from pathlib import Path
 
+import torch
 
-def main(inp, out_dir):
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
+
+def main(inp, out_dir, checkpoint=None):
+    input_path = Path(inp)
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input scan not found: {input_path}")
+
+    output_dir = Path(out_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     from models.unet import UNet
+
     model = UNet()
-    # model.load_state_dict(torch.load("outputs/logs/best_model.pt", map_location=device))
+    if checkpoint:
+        model.load_state_dict(torch.load(checkpoint, map_location=device))
     model.eval().to(device)
-    print(f"Input: {inp}  →  Output: {out_dir}")
-    # import nibabel as nib
-    # vol = nib.load(inp).get_fdata()  # preprocess, slice, predict, save
+    print(f"Input: {input_path} -> Output: {output_dir}")
+    print("Next step: load the scan, preprocess slices, run prediction, and save mask overlays.")
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--input", required=True)
-    p.add_argument("--output", default="outputs/predictions/")
-    a = p.parse_args()
-    main(a.input, a.output)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", default="outputs/predictions/")
+    parser.add_argument("--checkpoint")
+    args = parser.parse_args()
+    main(args.input, args.output, args.checkpoint)

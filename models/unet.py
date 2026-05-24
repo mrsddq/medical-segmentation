@@ -24,8 +24,9 @@ class UNet(nn.Module):
     Paper: Ronneberger et al., 2015 (https://arxiv.org/abs/1505.04597)
     """
     def __init__(self, in_channels=1, out_channels=1,
-                 features=[64, 128, 256, 512], dropout=0.2):
+                 features=(64, 128, 256, 512), dropout=0.2):
         super().__init__()
+        features = list(features)
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
         self.pool = nn.MaxPool2d(2, 2)

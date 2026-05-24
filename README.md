@@ -1,124 +1,118 @@
 # Medical Image Segmentation with U-Net
 
-Semantic segmentation of CT and MRI scans using a PyTorch U-Net with skip connections. Trained and evaluated on volumetric medical imaging data.
+Portfolio-ready PyTorch U-Net project for medical image segmentation experiments.
 
-## Results
+The repository provides the model, configuration, reusable metrics, and script skeletons needed to train and evaluate on private or public medical imaging datasets. It does not include clinical data, model weights, or unverified metrics.
 
-| Metric | Value |
-|---|---|
-| Dice Coefficient | 0.87 |
-| Training Loss Reduction | ~30% |
-| IoU | _add after re-run_ |
-| Precision | _add after re-run_ |
-| Recall | _add after re-run_ |
+## Highlights
 
-> Evaluation performed on held-out test split. Dataset kept private — see Data section.
+- PyTorch U-Net with encoder-decoder skip connections
+- Dice and Dice+BCE metric/loss helpers
+- YAML experiment configuration
+- Training, evaluation, and inference entry points
+- Unit tests for model shape, config loading, and metrics
+- Results template for reproducible experiment reporting
 
 ## Architecture
 
-```
-Input (1×512×512)
-  └─ Encoder (4× downsample blocks: Conv→BN→ReLU×2 + MaxPool)
-       └─ Bottleneck (1024 channels)
-            └─ Decoder (4× upsample blocks: ConvTranspose + skip concat + Conv×2)
-                 └─ Output head (1×1 Conv → sigmoid)
+```text
+Input image
+  -> encoder blocks with max pooling
+  -> bottleneck
+  -> decoder blocks with transpose convolutions
+  -> skip concatenation from matching encoder stages
+  -> 1x1 segmentation head
+  -> sigmoid mask probability
 ```
 
-Skip connections bridge each encoder stage to the corresponding decoder stage, preserving spatial detail critical for boundary accuracy.
+## Structure
 
-## Quickstart
+```text
+configs/
+  unet.yaml
+docs/
+  RESULTS_TEMPLATE.md
+models/
+  unet.py
+scripts/
+  train.py
+  evaluate.py
+  infer.py
+  metrics.py
+  utils.py
+tests/
+  test_unet.py
+```
+
+## Setup
 
 ```bash
-git clone https://github.com/your-username/medical-segmentation
-cd medical-segmentation
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Data
+## Data Layout
 
-Dataset is private clinical CT/MRI data and cannot be redistributed. To reproduce with public data, use one of:
+Clinical data is not committed. Use a private dataset or a public dataset such as:
 
-- [Medical Segmentation Decathlon](http://medicaldecathlon.com/) — Task03 Liver or Task09 Spleen
-- [CHAOS Challenge](https://chaos.grand-challenge.org/) — abdominal MRI
+- Medical Segmentation Decathlon
+- CHAOS Challenge
+- KiTS kidney tumor segmentation dataset
 
-Place data as:
-```
+Recommended local layout:
+
+```text
 data/
-  raw/          ← original NIfTI/DICOM files
-  processed/    ← normalised, resampled volumes
+  raw/
+  processed/
   splits/
     train.txt
     val.txt
     test.txt
 ```
 
-## Training
+## Train
 
 ```bash
-python scripts/train.py --config configs/unet.yaml
+python -m scripts.train --config configs/unet.yaml
 ```
 
-Key config options in `configs/unet.yaml`:
+The current script initializes the model, optimizer, scheduler, and checkpoint directory. Connect your dataset class and DataLoader before running full training.
 
-```yaml
-model:
-  in_channels: 1
-  out_channels: 1
-  features: [64, 128, 256, 512]
-
-training:
-  epochs: 100
-  batch_size: 8
-  lr: 1e-4
-  optimizer: adam
-  loss: dice_bce
-
-data:
-  image_size: 512
-  train_split: 0.7
-  val_split: 0.15
-  test_split: 0.15
-```
-
-## Evaluation
+## Evaluate
 
 ```bash
-python scripts/evaluate.py --checkpoint outputs/logs/best_model.pt --split test
+python -m scripts.evaluate --checkpoint outputs/logs/best_model.pt --split test
 ```
-
-Outputs a per-case Dice table and saves overlay PNGs to `outputs/predictions/`.
 
 ## Inference
 
 ```bash
-python scripts/infer.py --input path/to/scan.nii.gz --output outputs/predictions/
+python -m scripts.infer --input data/processed/case_001.nii.gz --checkpoint outputs/logs/best_model.pt
 ```
 
-## Sample Outputs
+## Testing
 
-_Add screenshots to `assets/` — see naming convention below._
+```bash
+pytest
+```
 
-| File | Contents |
-|---|---|
-| `assets/01_input_scan.png` | Raw CT/MRI slice |
-| `assets/02_ground_truth.png` | GT mask overlay |
-| `assets/03_prediction.png` | Model prediction overlay |
-| `assets/04_comparison.png` | GT vs predicted side-by-side |
-| `assets/05_error_case.png` | Failure case with annotation |
-| `assets/06_training_curve.png` | Loss + Dice vs epoch |
+## Results
+
+No verified public metrics are committed yet. After training, record results in [docs/RESULTS_TEMPLATE.md](docs/RESULTS_TEMPLATE.md) and add de-identified sample overlays under `assets/`.
+
+Recommended artifacts:
+
+- `assets/input-slice.png`
+- `assets/ground-truth-overlay.png`
+- `assets/prediction-overlay.png`
+- `assets/training-curve.png`
+- `assets/failure-case.png`
 
 ## Limitations
 
-- Model trained on a single private dataset — generalisation to out-of-distribution scanners not verified
-- 2D slice-level inference; 3D context not exploited
-- Dice coefficient reported at dataset level; per-class breakdown pending
-
-## Environment
-
-```
-Python 3.10
-PyTorch 2.1
-CUDA 11.8
-```
-
-Full dependency list in `requirements.txt`.
+- Dataset and weights are not included.
+- Script entry points are designed for extension with a project-specific dataset class.
+- 2D slice-level U-Net does not capture full 3D context.
+- Any metric should be treated as dataset-specific until externally validated.
