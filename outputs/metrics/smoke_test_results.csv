@@ -1,0 +1,3 @@
+artifact_type,model,metric,value,notes
+schema_smoke,unet,dice,requires_real_dataset,Real value must come from a validated run
+schema_smoke,unet,mask_shape,matched_input,Non-benchmark schema check only

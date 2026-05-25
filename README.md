@@ -1,5 +1,7 @@
 # Medical Image Segmentation with U-Net
 
+[![CI](https://github.com/mrsddq/medical-segmentation/actions/workflows/ci.yml/badge.svg)](https://github.com/mrsddq/medical-segmentation/actions/workflows/ci.yml)
+
 Portfolio-ready PyTorch U-Net project for medical image segmentation experiments.
 
 The repository provides the model, configuration, reusable metrics, and script skeletons needed to train and evaluate on private or public medical imaging datasets. It does not include clinical data, model weights, or unverified metrics.
@@ -31,6 +33,10 @@ Input image
 configs/
   unet.yaml
 docs/
+  ABLATION_PLAN.md
+  ARCHITECTURE_RATIONALE.md
+  DEPLOYMENT_NOTES.md
+  REPRODUCIBILITY.md
   RESULTS_TEMPLATE.md
 models/
   unet.py
@@ -101,6 +107,15 @@ pytest
 ## Results
 
 No verified public metrics are committed yet. After training, record results in [docs/RESULTS_TEMPLATE.md](docs/RESULTS_TEMPLATE.md) and add de-identified sample overlays under `assets/`.
+
+Research support docs:
+
+- [Reproducibility Plan](docs/REPRODUCIBILITY.md)
+- [Architecture Rationale](docs/ARCHITECTURE_RATIONALE.md)
+- [Ablation Plan](docs/ABLATION_PLAN.md)
+- [Deployment Notes](docs/DEPLOYMENT_NOTES.md)
+
+`outputs/metrics/smoke_test_results.csv` is a schema artifact only, not a benchmark.
 
 Recommended artifacts:
 
