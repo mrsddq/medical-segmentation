@@ -1,35 +1,28 @@
 seed: 42
 
 model:
+  type: unet
   in_channels: 1
   out_channels: 1
   features: [64, 128, 256, 512]
   dropout: 0.2
 
 training:
-  epochs: 100
+  epochs: 50
   batch_size: 8
   lr: 1.0e-4
   optimizer: adam
   scheduler: cosine
-  loss: dice_bce
-  dice_weight: 0.5
-  bce_weight: 0.5
+  loss: bce
   early_stopping_patience: 15
 
 data:
   image_size: 512
-  train_split: 0.70
-  val_split: 0.15
-  test_split: 0.15
+  splits_dir: data/splits
   normalize: true
   augmentation:
-    horizontal_flip: true
-    vertical_flip: false
-    rotation_limit: 15
-    elastic_transform: true
+    enabled: false
 
 logging:
   checkpoint_dir: outputs/logs/
-  save_best_only: true
-  log_interval: 10
+  metrics_path: outputs/metrics/baseline_results.csv
