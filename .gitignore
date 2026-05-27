@@ -12,3 +12,12 @@ wandb/
 outputs/predictions/
 assets/*.pt
 assets/*.pth
+*.py[cod]
+venv/
+node_modules/
+dist/
+build/
+coverage/
+reports/
+outputs/
+*.log
