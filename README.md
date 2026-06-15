@@ -110,6 +110,7 @@ No verified public metrics are committed yet. After training, record results in 
 
 Research support docs:
 
+- [Portfolio Evidence Plan](docs/PORTFOLIO_EVIDENCE.md)
 - [Reproducibility Plan](docs/REPRODUCIBILITY.md)
 - [Architecture Rationale](docs/ARCHITECTURE_RATIONALE.md)
 - [Ablation Plan](docs/ABLATION_PLAN.md)

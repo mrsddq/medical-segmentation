@@ -14,3 +14,5 @@ jobs:
           python-version: "3.10"
       - name: Compile Python files
         run: python -m compileall models scripts tests
+      - name: Run portfolio contract tests
+        run: python -m unittest discover -s tests -p "test_portfolio_contract.py"
