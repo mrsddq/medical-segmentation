@@ -1,5 +1,7 @@
 import torch
+import pytest
 
+from data.dataset import HeartDataset
 from models.unet import UNet
 from scripts.metrics import dice_bce_loss, dice_score
 from scripts.utils import load_config
@@ -27,3 +29,21 @@ def test_config_loads():
 
     assert config["model"]["in_channels"] == 1
     assert config["training"]["loss"] == "dice_bce"
+
+
+def test_normalize_constant_slice_returns_zeros():
+    image = torch.ones(4, 4).numpy()
+
+    normalized = HeartDataset._normalize(image)
+
+    assert normalized.shape == image.shape
+    assert normalized.max() == 0.0
+    assert normalized.min() == 0.0
+
+
+def test_load_config_rejects_missing_sections(tmp_path):
+    config = tmp_path / "broken.yaml"
+    config.write_text("model:\n  in_channels: 1\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="missing sections"):
+        load_config(config)
