@@ -1,0 +1,16 @@
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+.ipynb_checkpoints
+.pytest_cache
+outputs
+runs
+checkpoints
+*.pt
+*.pth
+*.onnx
+*.log
+.env
+.env.*
