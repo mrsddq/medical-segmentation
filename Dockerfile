@@ -13,4 +13,9 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
+RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/outputs /app/runs \
+    && chown -R appuser:appuser /app/outputs /app/runs
+USER appuser
+
 ENTRYPOINT ["python", "scripts/infer.py"]
