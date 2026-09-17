@@ -53,3 +53,14 @@ def test_inference_preserves_original_shape_and_affine(tmp_path):
     assert result.get_data_dtype() == np.dtype("uint8")
     output = evaluate(str(checkpoint), "test", str(config), str(tmp_path / "metrics.csv"))
     assert "test,2," in output.read_text()
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf"), -0.1, 1.1])
+def test_invalid_probabilities_cannot_score_as_perfect_background(value):
+    with pytest.raises(ValueError):
+        per_sample_overlap(torch.full((1, 1, 2, 2), value), torch.zeros(1, 1, 2, 2))
+
+
+def test_targets_must_be_binary():
+    with pytest.raises(ValueError, match="binary"):
+        per_sample_overlap(torch.zeros(1, 1, 2, 2), torch.full((1, 1, 2, 2), 0.5))

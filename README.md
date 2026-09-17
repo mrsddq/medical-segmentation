@@ -149,3 +149,10 @@ Validation and test retain background-only slices. Training may opt into
 have matching shape and affine. Split files contain `image_path,label_path` rows;
 paths are interpreted relative to the working directory. Keep case-level splits
 and use de-identified data. No clinical validation or deployment claim is made.
+
+Metrics reject nonfinite/out-of-range probabilities and nonbinary targets, so a
+broken checkpoint cannot appear perfect on background slices. The current trainer
+uses Adam, cosine scheduling and equally weighted Dice/BCE; optimizer/loss weight
+configuration variants are not implemented. Augmentation currently uses the fixed
+transform recipe in `HeartDataset._augment`; per-transform YAML knobs are not
+independently honored. Disable augmentation for the minimal test configuration.
