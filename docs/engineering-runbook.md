@@ -1,39 +1,45 @@
-﻿# Engineering Runbook
+# Medical segmentation engineering runbook
 
-## Repository Profile
+This repository implements binary segmentation of paired 3D NIfTI volumes using
+2D U-Net slices. Follow the [README setup](../README.md#setup),
+[training](../README.md#train), [evaluation](../README.md#evaluate), and
+[inference](../README.md#inference) commands for data-backed experiments.
 
-- Repository: $repoName
-- Classification: Python project
-- Tracked files: 31
-- Python files: 14
-- JavaScript/TypeScript files: 0
-- Notebooks: 0
-- Terraform files: 0
+## Local verification
 
-## Setup
+Run from the repository root with Python 3.12:
 
-``bash
-python -m pip install -r requirements.txt
-``
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-test.txt
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m pytest -q
+```
 
-## Verification
+Dependency installation needs package-network access. Once installed, the test
+suite runs on CPU with generated fixtures and does not download model weights or
+datasets. On Windows, activate with `.venv\Scripts\Activate.ps1` in PowerShell
+and run `python -m pytest -q`.
 
-``bash
-python -m unittest discover -s tests
-python -m compileall -q .
-``
+Tests execute a small U-Net, synthetic NIfTI inference/evaluation, image/mask
+geometry checks, background-slice inclusion, and metric validation. These are
+software checks, not clinical performance measurements.
 
-## Release Hygiene
+## Data and artifact contract
 
-- Keep generated outputs, caches, local datasets, virtual environments, and dependency folders out of git.
-- Prefer deterministic commands over manual notebook or console-only steps.
-- Document required secrets and environment variables instead of committing them.
-- Keep Dockerfiles, CI workflows, and tests aligned with the actual project stack.
-- Treat learning or reference material honestly as reference material; do not present it as production service code unless it has service-grade tests, deployment, and operations docs.
+- Prepare case-level `image_path,label_path` split files; paths are relative to the
+  working directory. Train/validation case paths must not overlap. Paired volumes
+  need identical shape and affine, and evaluation retains background slices.
+- Keep clinical data and trained weights outside version control. Only explicitly
+  de-identified example artifacts belong in a public repository.
+- Training writes `best.pt` under the configured checkpoint directory. Retain the
+  exact configuration and data-split provenance with it. The trainer currently uses
+  fixed Adam/cosine/Dice+BCE choices; per-transform augmentation knobs are not all
+  independently honored, as explained in the README.
+- Inference writes a binary NIfTI mask at the source volume's shape and affine.
+  Evaluation reports mean per-slice Dice and IoU, not patient-level metrics.
+- Nonfinite probabilities, nonbinary targets, or mismatched geometry are errors.
+  Fix the underlying checkpoint/data issue instead of replacing invalid values
+  with background or omitting failed samples.
 
-## Maintenance Checklist
-
-- Review dependencies quarterly.
-- Run tests before every push.
-- Confirm git status --short is clean before packaging.
-- Include .git only when an external submission explicitly requires repository history.
+No clinical deployment or externally validated accuracy is claimed.
