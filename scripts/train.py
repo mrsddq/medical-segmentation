@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 
 from data import HeartDataset
 from models import AttentionUNet, UNet
-from scripts.metrics import dice_bce_loss, dice_score
+from scripts.metrics import dice_bce_loss, per_sample_overlap
 from scripts.utils import load_config
 
 
@@ -42,6 +42,7 @@ def build_loader(cfg: dict, split: str, shuffle: bool) -> DataLoader:
         split_file=split_file,
         image_size=int(data_cfg.get("image_size", 512)),
         augment=augment,
+        min_foreground_fraction=float(data_cfg.get("train_min_foreground_fraction", 0.0)) if split == "train" else 0.0,
     )
     return DataLoader(
         dataset,
@@ -65,7 +66,7 @@ def run_epoch(model, loader, optimizer, device, train: bool) -> float:
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
-        scores.append(float(dice_score(preds.detach().cpu(), masks.detach().cpu())))
+        scores.extend(per_sample_overlap(preds.detach().cpu(), masks.detach().cpu())[0].tolist())
     return float(np.mean(scores)) if scores else 0.0
 
 
@@ -76,6 +77,10 @@ def main(cfg_path: str) -> Path:
     model = build_model(cfg).to(device)
     train_loader = build_loader(cfg, "train", shuffle=True)
     val_loader = build_loader(cfg, "val", shuffle=False)
+    train_cases = {record.image_path.resolve() for record in train_loader.dataset.records}
+    val_cases = {record.image_path.resolve() for record in val_loader.dataset.records}
+    if train_cases & val_cases:
+        raise ValueError("Training and validation case paths overlap")
 
     checkpoint_dir = Path(cfg["logging"]["checkpoint_dir"])
     checkpoint_dir.mkdir(parents=True, exist_ok=True)

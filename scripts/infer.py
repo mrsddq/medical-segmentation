@@ -7,14 +7,8 @@ import numpy as np
 import torch
 
 from data.dataset import HeartDataset
-from models import AttentionUNet, UNet
+from scripts.train import build_model
 from scripts.utils import load_config
-
-
-def build_model(cfg: dict) -> torch.nn.Module:
-    model_cfg = dict(cfg["model"])
-    model_type = model_cfg.pop("type", "unet")
-    return AttentionUNet(**model_cfg) if model_type == "attention_unet" else UNet(**model_cfg)
 
 
 def main(inp: str, out_dir: str, checkpoint: str, config: str) -> Path:
@@ -26,11 +20,14 @@ def main(inp: str, out_dir: str, checkpoint: str, config: str) -> Path:
     cfg = load_config(config)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(cfg).to(device)
-    model.load_state_dict(torch.load(checkpoint, map_location=device))
+    model.load_state_dict(torch.load(checkpoint, map_location=device, weights_only=True))
     model.eval()
 
     nib = _require_nibabel()
-    volume = np.asarray(nib.load(str(input_path)).dataobj, dtype=np.float32)
+    source = nib.load(str(input_path))
+    volume = np.asarray(source.dataobj, dtype=np.float32)
+    if volume.ndim != 3 or not np.isfinite(volume).all():
+        raise ValueError("Input must be a finite 3D NIfTI volume")
     predictions = []
     with torch.no_grad():
         for slice_index in range(volume.shape[2]):
@@ -38,10 +35,16 @@ def main(inp: str, out_dir: str, checkpoint: str, config: str) -> Path:
             image = _resize_image(image, int(cfg["data"].get("image_size", 512)))
             tensor = torch.from_numpy(image[None, None]).float().to(device)
             pred = model(tensor).squeeze().cpu().numpy()
+            import cv2
+            # Restore probabilities before thresholding; retain original voxel geometry.
+            pred = cv2.resize(pred, (volume.shape[1], volume.shape[0]), interpolation=cv2.INTER_LINEAR)
             predictions.append((pred > 0.5).astype(np.uint8))
     mask = np.stack(predictions, axis=-1)
-    output_path = output_dir / f"{input_path.stem}_mask.npy"
-    np.save(output_path, mask)
+    name = input_path.name.removesuffix(".gz").removesuffix(".nii")
+    output_path = output_dir / f"{name}_mask.nii.gz"
+    header = source.header.copy()
+    header.set_data_dtype(np.uint8)
+    nib.save(nib.Nifti1Image(mask, source.affine, header), str(output_path))
     return output_path
 
 

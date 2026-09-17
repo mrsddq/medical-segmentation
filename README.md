@@ -4,7 +4,7 @@
 
 Portfolio-ready PyTorch U-Net project for medical image segmentation experiments.
 
-The repository provides the model, configuration, reusable metrics, and script skeletons needed to train and evaluate on private or public medical imaging datasets. It does not include clinical data, model weights, or unverified metrics.
+The repository provides the model, configuration, reusable metrics, and implemented training, evaluation, and inference needed to experiment on private or public medical imaging datasets. It does not include clinical data, model weights, or unverified metrics.
 
 ## Highlights
 
@@ -84,18 +84,18 @@ data/
 python -m scripts.train --config configs/unet.yaml
 ```
 
-The current script initializes the model, optimizer, scheduler, and checkpoint directory. Connect your dataset class and DataLoader before running full training.
+The script loads paired NIfTI slices, trains with validation-based checkpoint selection, and rejects training/validation case-path overlap. Prepare split files using `scripts.prepare_data` before training.
 
 ## Evaluate
 
 ```bash
-python -m scripts.evaluate --checkpoint outputs/logs/best_model.pt --split test
+python -m scripts.evaluate --checkpoint outputs/logs/best.pt --split test
 ```
 
 ## Inference
 
 ```bash
-python -m scripts.infer --input data/processed/case_001.nii.gz --checkpoint outputs/logs/best_model.pt
+python -m scripts.infer --input data/processed/case_001.nii.gz --checkpoint outputs/logs/best.pt
 ```
 
 ## Testing
@@ -129,6 +129,23 @@ Recommended artifacts:
 ## Limitations
 
 - Dataset and weights are not included.
-- Script entry points are designed for extension with a project-specific dataset class.
+- The supported workflow is binary segmentation of paired 3D NIfTI volumes using 2D slices.
 - 2D slice-level U-Net does not capture full 3D context.
 - Any metric should be treated as dataset-specific until externally validated.
+
+## Correctness gates and offline verification
+
+Install `requirements-test.txt`, then run `python -m pytest -q`. Synthetic NIfTI
+tests exercise real model inference, geometry preservation, background inclusion,
+metric aggregation, and malformed input handling without clinical data or weights.
+Inference writes `<case>_mask.nii.gz` at the **original volume shape and affine**;
+resizing is only an internal model step. Evaluation computes binary Dice and IoU
+per slice and averages all slices equally; IoU is not inferred from mean Dice.
+An empty prediction/target pair scores 1. Patient/volume-level scores are not yet
+reported and may differ from these slice averages.
+
+Validation and test retain background-only slices. Training may opt into
+`data.train_min_foreground_fraction`; its default is zero. Paired volumes must
+have matching shape and affine. Split files contain `image_path,label_path` rows;
+paths are interpreted relative to the working directory. Keep case-level splits
+and use de-identified data. No clinical validation or deployment claim is made.
