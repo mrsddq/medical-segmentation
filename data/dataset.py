@@ -22,13 +22,15 @@ class HeartDataset(Dataset):
         self,
         split_file: str | Path,
         image_size: int = 512,
-        min_foreground_fraction: float = 0.05,
+        min_foreground_fraction: float = 0.0,
         augment: bool = False,
     ) -> None:
         self.split_file = Path(split_file)
         self.image_size = image_size
         self.min_foreground_fraction = min_foreground_fraction
         self.augment = augment
+        if image_size < 1 or not 0 <= min_foreground_fraction <= 1:
+            raise ValueError("image_size must be positive and foreground fraction must be in [0, 1]")
         self.records = self._index_records()
 
     def __len__(self) -> int:
@@ -60,15 +62,27 @@ class HeartDataset(Dataset):
             if not line.strip():
                 continue
             image_path, label_path = [Path(part) for part in line.split(",")]
-            mask = np.asarray(nib.load(str(label_path)).dataobj)
+            image_volume = nib.load(str(image_path))
+            label_volume = nib.load(str(label_path))
+            if len(image_volume.shape) != 3 or image_volume.shape != label_volume.shape:
+                raise ValueError("Image and mask must be matching 3D volumes")
+            if not np.allclose(image_volume.affine, label_volume.affine):
+                raise ValueError("Image and mask affine geometry must match")
+            mask = np.asarray(label_volume.dataobj)
+            if not np.isfinite(mask).all():
+                raise ValueError("Mask contains nonfinite values")
             for slice_index in range(mask.shape[2]):
                 foreground = float((mask[:, :, slice_index] > 0).mean())
                 if foreground >= self.min_foreground_fraction:
                     records.append(SliceRecord(image_path, label_path, slice_index))
+        if not records:
+            raise ValueError("Split contains no slices after filtering")
         return records
 
     @staticmethod
     def _normalize(image: np.ndarray) -> np.ndarray:
+        if not np.isfinite(image).all():
+            raise ValueError("Image contains nonfinite values")
         low, high = np.percentile(image, [1, 99])
         clipped = np.clip(image, low, high)
         denom = float(clipped.max() - clipped.min())

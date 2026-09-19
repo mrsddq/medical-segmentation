@@ -40,4 +40,4 @@ jobs:
       - name: Show inference help
         run: docker run --rm medical-segmentation:smoke --help
       - name: Run tests in Docker
-        run: docker run --rm --entrypoint python medical-segmentation:smoke -m unittest discover -s tests
+        run: docker run --rm --entrypoint python medical-segmentation:smoke -m pytest -q
