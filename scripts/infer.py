@@ -35,6 +35,8 @@ def main(inp: str, out_dir: str, checkpoint: str, config: str) -> Path:
             image = _resize_image(image, int(cfg["data"].get("image_size", 512)))
             tensor = torch.from_numpy(image[None, None]).float().to(device)
             pred = model(tensor).squeeze().cpu().numpy()
+            if not np.isfinite(pred).all() or np.any((pred < 0) | (pred > 1)):
+                raise ValueError("Model probabilities must be finite and in [0, 1]")
             import cv2
             # Restore probabilities before thresholding; retain original voxel geometry.
             pred = cv2.resize(pred, (volume.shape[1], volume.shape[0]), interpolation=cv2.INTER_LINEAR)

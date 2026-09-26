@@ -64,3 +64,22 @@ def test_invalid_probabilities_cannot_score_as_perfect_background(value):
 def test_targets_must_be_binary():
     with pytest.raises(ValueError, match="binary"):
         per_sample_overlap(torch.zeros(1, 1, 2, 2), torch.full((1, 1, 2, 2), 0.5))
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -0.1, 1.1])
+def test_inference_rejects_invalid_probabilities(tmp_path, monkeypatch, value):
+    class InvalidModel(torch.nn.Module):
+        def forward(self, image):
+            return torch.full_like(image, value)
+
+    monkeypatch.setattr("scripts.infer.build_model", lambda cfg: InvalidModel())
+    image, _, _, _ = setup_case(tmp_path)
+    config = tmp_path / "config.yaml"
+    config.write_text(yaml.safe_dump({"model": {}, "training": {},
+                                      "data": {"image_size": 16}, "logging": {}}))
+    checkpoint = tmp_path / "model.pt"
+    torch.save({}, checkpoint)
+    output = tmp_path / "out"
+    with pytest.raises(ValueError, match="probabilities"):
+        infer(str(image), str(output), str(checkpoint), str(config))
+    assert not list(output.glob("*_mask.nii.gz"))
